@@ -31,7 +31,7 @@ rc.Connect();
 RepetierMqttClient MqttClient = new RepetierMqttClientBuilder()
     .WithRepetierConnection(rc)
     .WithMqttClientOptions(MqttOptionsProvider.DefaultMqttClientOptions)       
-	.WithBaseTopic("RepetierMqtt/Neptune-19")
+    .WithBaseTopic("RepetierMqtt/Neptune-19")
     .Build();
 
 MqttClient.Connect();
