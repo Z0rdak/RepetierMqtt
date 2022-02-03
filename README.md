@@ -1,287 +1,159 @@
-# RepetierMqtt - A simple, event driven [Repetier Server](https://www.repetier-server.com/ "Repetier Server") client
+# RepetierMqtt - A simple, easy configurable MQTT client to access your [Repetier Server](https://www.repetier-server.com/ "Repetier Server")
 
 ## Introduction
 
-RepetierSharp is a simple, event-driven client which encapsulates the WebSocket API (as well as the REST API where needed) to control the Repetier Server.
-
-### What is Repetier Server?
-
-> "Repetier-Server is the professional all-in-one solution to control and manage your 3d printers and to get the most out of it."
-
-https://www.repetier-server.com/
-
-### Versioning
-
-This library is build against and tested with RepetierServer version 1.2.0. The serialization for most commands and events should be working with earlier versions, but there is the possibilty of crashes when using RepetierSharp with earlier versions due to undocumented changes.
-
-Note that you are still able to use RepetierSharp by just using the version independent event handlers for events and command responses: `OnRawEvent(string eventName, string printer, byte[] payload)` and `OnRawResponse(int callbackID, string command, byte[] response)` respectively.
+RepetierMqtt is a small and simple MQTT client which leverages the RepetierSharp client to forward information from the Repetier Server API to MQTT. 
+It also provides the possibility to send commands via MQTT to the Repetier Server as well as upload and start gcode files.
 
 ### Framework support
 
-Currently RepetierSharp supports .NET Core 3.1 with plans to also support .NET 5 and above.
-
-### Problem
-
-I quite enjoy using the Repetier Server software to control/manage our 3d printers. But I could not find any client implementing the Repetier Server API. This was needed because I wanted to control the Repetier Server programmatically to automate certain tasks.
-
-[Repetier Server API](https://prgdoc.repetier-server.com/v1/docs/index.html#/en/index)
+Currently RepetierMqtt supports .NET Core 3.1 with plans to also support .NET 5 and above.
 
 ## Getting started
 
-**DISCLAIMER:** *RepetierSharp is still in beta. Bugs are to be expected - please bear with me and help improving RepetierSharp by submitting issues on [GitHub](https://github.com/Z0rdak/RepetierSharp/issues).*
+**DISCLAIMER:** *RepetierMqtt is still in beta. Bugs are to be expected - please bear with me and help improving it by submitting issues on [GitHub](https://github.com/Z0rdak/RepetierMqtt/issues).*
 
-The following sections show some examples on how to use the RepetierSharp client. The examples are not exhaustive. I will try to write a more thourough documentation as soon as possible.
+The following sections show some examples on how to use the RepetierMqtt client. The examples are not exhaustive. I will try to write a more thourough documentation as soon as possible.
 
-RepetierSharp uses a fluent builder api to reduce the complexity when creating a new client instance.
+RepetierMqtt uses a fluent builder api to reduce the complexity when creating a new client instance.
 
-### Establish a connection
+### Creating a MQTT client instance
 
-Simply start by creating an instance of the `RepetierConnection` class. To establish a connection it is possible to provide the Repetier Server API-Key or user credentials.
-
-The most basic configuration to setup a working `RepetierConnection` looks like this:
+The RepetierMqtt client needs an instance of `RepetierConnection` from RepetierSharp.
 
 ```csharp
 RepetierConnection rc = new RepetierConnectionBuilder()
-	.WithHost("demo.repetier-server.com", 4000)
-	.Build();
-
+    .WithHost("demo.repetier-server.com", 4006)
+    .WithApiKey("7075e377-7472-447a-b77e-86d481995e7b")
+    .Build();
 rc.Connect();
+
+RepetierMqttClient MqttClient = new RepetierMqttClientBuilder()
+    .WithRepetierConnection(rc)
+    .WithMqttClientOptions(MqttOptionsProvider.DefaultMqttClientOptions)       
+	.WithBaseTopic("RepetierMqtt/Neptune-19")
+    .Build();
+
+MqttClient.Connect();
 ```
 
-This gives you access to the repetier server with the global user profile.
+This creates an simple instance with not much functionally other than offering you a MQTT client to publish messages. 
+The provided `BaseTopic` is put in front of every other provided topic to create a compound topic.  
 
-In most cases you would want to create a connection by suppling a API-Key or user credentials:
+### Adding default topics for events and response messages
 
-Example using user credentials:
+To forward events and responses from commands you can add default topics:
+
 ```csharp
-RepetierConnection rc = new RepetierConnectionBuilder()
-	.WithHost("demo.repetier-server.com:4000")
-	.WithCredentials("user", "password", rememberSession: true)
-	.Build();
+RepetierMqttClient MqttClient = new RepetierMqttClientBuilder()
+    .WithRepetierConnection(rc)
+    .WithMqttClientOptions(MqttOptionsProvider.DefaultMqttClientOptions)       
+	.WithBaseTopic("RepetierMqtt/Neptune-19")
+    .WithDefaultEventTopic("Event")               // {BaseTopic}/Event[/{printer}]/{event}
+    .WithDefaultResponseTopic("Response")         // {BaseTopic}/Response/{callbackID};{command}
+    .Build();
 
-rc.Connect();
+MqttClient.Connect();
 ```
 
-Example using a Repetier Server API-Key:
-```csharp
-RepetierConnection rc = new RepetierConnectionBuilder()
-	.WithHost("demo.repetier-server.com", 4000)
-	.WithApiKey("6ed22859-9e72-4f24-928f-0430ef08e3b9")
-	.Build();
+With this setup all events associated with a printer are published to their own topic `RepetierMqtt/Neptune-19/Event/{printer}/{eventName}`. 
+Other events are published to `RepetierMqtt/Neptune-19/Event/{eventName}`.
 
-rc.Connect();
+Commands can be associated with a printer but are published to their own topic without the printer included `RepetierMqtt/Neptune-19/Response/{callbackID};{command}`.
+
+### Defining topics for specific events or command responses
+
+```csharp
+RepetierMqttClient MqttClient = new RepetierMqttClientBuilder()
+    .WithRepetierConnection(rc)
+    .WithMqttClientOptions(MqttOptionsProvider.DefaultMqttClientOptions)       
+	.WithBaseTopic("RepetierMqtt/Neptune-19")
+    .WithCommandResponseTopic("startJob", "StartJobTopic")               //{BaseTopic}/StartJobTopic/{callbackId}
+    .WithPrinterEventTopic("temp", "Cartesian", "CartesianTempValues")   //{BaseTopic}/CartesianTempValues
+    .WithEventTopic("temp", "AllTempValues")                             //{BaseTopic}/AllTempValues
+    .Build();
+
+MqttClient.Connect();
 ```
-When both, API-Key and user credentials are supplied, the last option will be used.
+Line 5 adds a topic where only information about command responses for the command `startJob` is published: `RepetierMqtt/Neptune-19/StartJobTopic/42`.
+The `callbackId` can be used to indentify the send command.
 
-### More examples
+Line 6 adds a topic for temps event associated with the printer Cartesian: `RepetierMqtt/Neptune-19/CartesianTempValues`.
+Line 7 adds a topic for all temp events:  `RepetierMqtt/Neptune-19/AllTempValues`.
 
-Create a connection, register and event handler for successfull connection, which activates the printer with the slug "Delta" and enqueues and starts the job with the id 6.
+###  Define topics for executing various repetier commands
 
 ```csharp
-RepetierConnection rc = new RepetierConnectionBuilder()
-	.WithHost("demo.repetier-server.com", 4000)
-	.WithApiKey("6ed22859-9e72-4f24-928f-0430ef08e3b9")
-	.Build();
+RepetierMqttClient MqttClient = new RepetierMqttClientBuilder()
+    .WithRepetierConnection(rc)
+    .WithMqttClientOptions(MqttOptionsProvider.DefaultMqttClientOptions)       
+	.WithBaseTopic("RepetierMqtt/Neptune-19")
+    .WithExecuteCommandTopic("Execute")           // {BaseTopic}/Execute          
+    .Build();
 
-rc.OnRepetierConnected += () =>
+MqttClient.Connect();
+```
+
+Different from the previous topics, this creates a subscription for the topic `RepetierMqtt/Neptune-19/Execute`. You are able to send any command to this topic to be executed. 
+
+The payload expected needs some additional information beside the actual command:
+
+```json
 {
-	Console.WriteLine("Connected!");
-	rc.ActivatePrinter("Delta");
-	rc.EnqueueJob(6);
-};
-
-rc.Connect();
+    "command": "startJob",
+    "printer": "Cartesian",
+    "data" : {
+        "id": 6
+    }
+}
 ```
 
-## Features
+Where `data` is the actual object to execute the command. It is possible to leave the printer field blank if the command is not associated with a printer.
 
-The following commands and events are named after the Repetier Server commands/events from the API documentation
-At the moment RepetierSharp supports the following features:
+### Define topics with predefined commands
 
-### Events
-
-To get notified about repetier events it is possible to register and event handler like this:
 ```csharp
-rc.OnEvent += (eventName, printer, eventData) => 
+RepetierMqttClient MqttClient = new RepetierMqttClientBuilder()
+    .WithRepetierConnection(rc)
+    .WithMqttClientOptions(MqttOptionsProvider.DefaultMqttClientOptions)       
+	.WithBaseTopic("RepetierMqtt/Neptune-19")
+    .WithPredefinedCommand("Action/ListPrinter", ListPrinterCommand.Instance)  // {BaseTopic}/Action/ListPrinter
+    .WithPredefinedCommand("Model/Part42/EnqueueAndStart", new CopyModelCommand(42))  // {BaseTopic}/Model/Part42/EnqueueAndStart
+    .Build();
+
+MqttClient.Connect();
+```
+
+This (Line 5) creates a subscription for the topic `RepetierMqtt/Neptune-19/Action/ListPrinter` which executes a static, predefined command.
+Line 6 creates a subscription for the topic `RepetierMqtt/Neptune-19/Model/Part42/EnqueueAndStart` which enqueues the specified model into the print queue and starts it when possible.
+
+### Define topics to upload (and start) gcode files/jobs
+
+```csharp
+RepetierMqttClient MqttClient = new RepetierMqttClientBuilder()
+    .WithRepetierConnection(rc)
+    .WithMqttClientOptions(MqttOptionsProvider.DefaultMqttClientOptions)       
+	.WithBaseTopic("RepetierMqtt/Neptune-19")
+    .WithUploadGCodeTopic("UploadGCode")           // {BaseTopic}/UploadGCode
+    .Build();
+
+MqttClient.Connect();
+```
+This topic creates a subscription for the topic `RepetierMqtt/Neptune-19/UploadGCode`, which is used to upload gcode files and print them directly.
+
+The payload expected for this topics looks like this: 
+
+```json
 {
-	// handle event
-};
+    "filepath": "/path/to/file.gcode",
+    "printer": "Cartesian",
+    "autostart": false,
+    "group": "#",
+    "overwrite": true
+}
 ```
 
-Where `eventData` is a `IRepetierEvent` instance. The `eventName` can be used to determine the event and cast the event data to the corresponding type provided in the RepetierSharp namespace.
+Note the path for the gcode file needs to be accessible for the MQTT client. This uses the functions from RepetierSharp, which uses the REST-API to upload/start gcode files. 
 
-At the moment the following repetier events are supported:
-
-<details>
-  <summary>**[Click to expand the list of supported events]**</summary>
-
-  - timerX
-- loginRequired
-- userCredentials
-- printerListChanged
-- messagesChanged
-- jobFinished
-- jobKilled
-- jobStarted
-- eepromData
-- state
-- config
-- firmwareChanged
-- temp
-- printerSettingChanged
-- jobsChanged
-- logout
-- printQueueChanged
-- foldersChanged
-- eepromClear
-- modelGroupListChanged
-- prepareJob
-- prepareJobFinished
-- changeFilamentRequested
-- remoteServersChanged
-- getExternalLinks
-  </details>
-
-Since there are many events and serialization for all events is still not implemented RepetierSharp also provides an event handler for the raw event data:
-
-```csharp
-rc.OnRawEvent += (eventName, printer, eventData) => 
-{
-	// handle eventData
-};
-```
-
-Where `eventData` is of type `byte[]` and contains the data from the `data` field of the event from original json sent by the server (see [documentation](https://prgdoc.repetier-server.com/v1/docs/index.html#/en/web-api/websocket/events)). 
-
-### Commands
-
-To get responses for the sent commands it is possible to register event handler similar as for the events:
-```csharp
-rc.OnResponse += (callbackId, command, response) =>
-{
-	// handle response
-};
-```
-
-Where `callbackId` is the id corresponding to the sent command, `command` is the name of the command and `response` of the type `IRepetierMessage` is the actual response data. This data can be cast to the corresponding type by determining the command and using the provided types within the namespace - analogous to the events.
-
-At the moment the following commands (inclusive responses) are suppored: 
-
-<details>
-  <summary>**[Click to expand the list of supported commands]**</summary>
-
-- login
-- logout
-- listPrinter
-- stateList
-- messages
-- listModels
-- listJobs
-- modelInfo
-- jobInfo
-- removeJob
-- send
-- copyModel
-- emergencyStop
-- activate
-- deactivate
-- updateUser
-- createUser
-- deleteUser
-- userList
-- startJob
-- stopJob
-- continueJob
-</details>
-
-Analogous to the events there are many commands and serialization for all is not yet implemented. Therefore RepetierSharp also provides an event handler for the raw command response data:
-
-```csharp
-rc.OnRawResponse += (callbackId, command, responseData) => 
-{
-	// handle command response
-};
-```
-
-Where `responseData` is of type `byte[]` and contains the data from the `data` field of the command from original json sent by the server (see [documentation](https://prgdoc.repetier-server.com/v1/docs/index.html#/en/web-api/websocket/index)). 
-
-### REST-API
-
-Additionally there are some functions levering the REST-API directly:
-
-- To start a print directly use:
-
-```csharp
-rc.UploadAndStartPrint("/path/to/gcode/file.gcode", "printerSlug");
-```
-- or just upload a gcode file by using:
-
-```csharp
-rc.UploadGCode("/path/to/gcode/file.gcode", "group", "printerSlug");
-```
-
-### Event handler
-
-Beside the already discussed event handlers for events and command responses there are some additional implemented handlers for common used events (to reduces the effort of checking for these events and casting the data):
-
-- OnLogReceived
-- OnJobFinishedReceived
-- OnJobStartedReceived
-- OnJobKilledReceived
-- OnJobsChanged
-- OnPrinterStateReceived
-- OnTempChangeReceived
-- OnPrinterListChanged
-- OnPrinterSettingsChanged
-- OnUserCredentialsReceived
-- OnLoginRequired
-- OnMessagesReceived
-- OnLoginReceived
-- OnPrinterListReceived
-- OnModelListReceived
-- OnModelInfoReceived
-- OnJobInfoReceived
-- OnJobListReceived
-
-### Cyclic command execution
-
-The Repetier Server web interface uses some commands to cyclic query information from the server. The same is possible with RepetierSharp:
-
-```csharp
-RepetierConnection rc = new RepetierConnectionBuilder()
-	.WithHost("demo.repetier-server.com", 4000)
-	.WithApiKey("6ed22859-9e72-4f24-928f-0430ef08e3b9")
-	.QueryPrinterInterval(RepetierTimer.Timer60)
-	.QueryStateInterval(RepetierTimer.Timer30)
-	.Build();
-```
-
-In lines 4 and 5 a cyclic call is added to query the printers and the printer status respectively. The RepetierTimer parameters correspond to the timer events of the Repetier server. The Timer30 event is triggered every 30 seconds, the Timer60 event every 60 seconds.
-This puts the queries in a queue whose contents are executed each time the corresponding event is triggered by the server.
-
-Additionaly there is also a method to add any other commands to these command queues: 
-
-```csharp
-RepetierConnection rc = new RepetierConnectionBuilder()
-	.WithHost("demo.repetier-server.com", 4000)
-	.WithApiKey("6ed22859-9e72-4f24-928f-0430ef08e3b9")
-	.WithCyclicCommand(RepetierTimer.Timer3600, UpdateAvailableCommand.Instance)
-	.Build();
-```
-In line 4 the command `updateAvailable` is added to the 1 hour timer queue so every hour RepetierSharp queries if there is a update for the Repetier Server available.
-
-## Documentation
-
-TBD
-
-## Roadmap
-
-The goal for this project is to add most (or even all) used WebSocket commands and events provided by the Repetier Server API to enable a full programmatic control of the Repetier Server.
-
-There are also some events and commands that are not documented in the API - with some time and effort, I will try to reconstruct these and integrate them into RepetierSharp.
-
-I am also in the process of writing a library which provides a mqtt client that uses RepetierSharp.
-
-## Contribute
-
-TODO: Issue/bug template
+If `autostart` is true, `group` and `overwrite` can be omitted. The gcode file is directly printed if possible or queued in the printing queue. 
+If `autostart` is false, the gcode file is uploaded to the specified group of the printer. `overwrite` determines if a existing file with the same name should be replaced.
