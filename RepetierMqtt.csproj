@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <AssemblyName>RepetierSharp.RepetierMqtt</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MQTTnet" Version="3.1.1" />
+    <PackageReference Include="RepetierSharp" Version="0.1.1" />
+  </ItemGroup>
+
+</Project>
