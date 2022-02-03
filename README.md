@@ -48,7 +48,7 @@ To forward events and responses from commands you can add default topics:
 RepetierMqttClient MqttClient = new RepetierMqttClientBuilder()
     .WithRepetierConnection(rc)
     .WithMqttClientOptions(MqttOptionsProvider.DefaultMqttClientOptions)       
-	.WithBaseTopic("RepetierMqtt/Neptune-19")
+    .WithBaseTopic("RepetierMqtt/Neptune-19")
     .WithDefaultEventTopic("Event")               // {BaseTopic}/Event[/{printer}]/{event}
     .WithDefaultResponseTopic("Response")         // {BaseTopic}/Response/{callbackID};{command}
     .Build();
@@ -67,7 +67,7 @@ Commands can be associated with a printer but are published to their own topic w
 RepetierMqttClient MqttClient = new RepetierMqttClientBuilder()
     .WithRepetierConnection(rc)
     .WithMqttClientOptions(MqttOptionsProvider.DefaultMqttClientOptions)       
-	.WithBaseTopic("RepetierMqtt/Neptune-19")
+    .WithBaseTopic("RepetierMqtt/Neptune-19")
     .WithCommandResponseTopic("startJob", "StartJobTopic")               //{BaseTopic}/StartJobTopic/{callbackId}
     .WithPrinterEventTopic("temp", "Cartesian", "CartesianTempValues")   //{BaseTopic}/CartesianTempValues
     .WithEventTopic("temp", "AllTempValues")                             //{BaseTopic}/AllTempValues
@@ -87,7 +87,7 @@ Line 7 adds a topic for all temp events:  `RepetierMqtt/Neptune-19/AllTempValues
 RepetierMqttClient MqttClient = new RepetierMqttClientBuilder()
     .WithRepetierConnection(rc)
     .WithMqttClientOptions(MqttOptionsProvider.DefaultMqttClientOptions)       
-	.WithBaseTopic("RepetierMqtt/Neptune-19")
+    .WithBaseTopic("RepetierMqtt/Neptune-19")
     .WithExecuteCommandTopic("Execute")           // {BaseTopic}/Execute          
     .Build();
 
@@ -116,7 +116,7 @@ Where `data` is the actual object to execute the command. It is possible to leav
 RepetierMqttClient MqttClient = new RepetierMqttClientBuilder()
     .WithRepetierConnection(rc)
     .WithMqttClientOptions(MqttOptionsProvider.DefaultMqttClientOptions)       
-	.WithBaseTopic("RepetierMqtt/Neptune-19")
+    .WithBaseTopic("RepetierMqtt/Neptune-19")
     .WithPredefinedCommand("Action/ListPrinter", ListPrinterCommand.Instance)  // {BaseTopic}/Action/ListPrinter
     .WithPredefinedCommand("Model/Part42/EnqueueAndStart", new CopyModelCommand(42))  // {BaseTopic}/Model/Part42/EnqueueAndStart
     .Build();
@@ -133,7 +133,7 @@ Line 6 creates a subscription for the topic `RepetierMqtt/Neptune-19/Model/Part4
 RepetierMqttClient MqttClient = new RepetierMqttClientBuilder()
     .WithRepetierConnection(rc)
     .WithMqttClientOptions(MqttOptionsProvider.DefaultMqttClientOptions)       
-	.WithBaseTopic("RepetierMqtt/Neptune-19")
+    .WithBaseTopic("RepetierMqtt/Neptune-19")
     .WithUploadGCodeTopic("UploadGCode")           // {BaseTopic}/UploadGCode
     .Build();
 
