@@ -55,21 +55,29 @@ namespace RepetierSharp.RepetierMqtt
                 return this;
             }
 
-            // TODO: how to integrade printer and command info
             public RepetierMqttClientBuilder WithDefaultResponseTopic(string topic, int qos = 0, bool retained = false)
             {
                 _repetierMqttClient.DefaultResponseTopic = BuildTopicFilter(topic, qos, retained);
                 return this;
             }
 
-            // TODO: how to integrade printer info
             public RepetierMqttClientBuilder WithEventTopic(string eventName, string topic, int qos = 0, bool retained = false)
             {
                 _repetierMqttClient.EventTopics.Add(eventName, BuildTopicFilter(topic, qos, retained));
                 return this;
             }
 
-            // TODO: how to integrade printer info
+            public RepetierMqttClientBuilder WithPrinterEventTopic(string eventName, string printer, string topic, int qos = 0, bool retained = false)
+            {
+                if (!_repetierMqttClient.PrinterEventTopics.ContainsKey(printer))
+                {
+                    _repetierMqttClient.PrinterEventTopics.Add(printer, new Dictionary<string, MqttTopicFilter>());
+                }
+                _repetierMqttClient.PrinterEventTopics[printer].Add(eventName, BuildTopicFilter(topic, qos, retained));
+                return this;
+            }
+
+
             public RepetierMqttClientBuilder WithCommandResponseTopic(string command, string topic, int qos = 0, bool retained = false)
             {
                 _repetierMqttClient.CommandResponseTopics.Add(command, BuildTopicFilter(topic, qos, retained));
@@ -165,6 +173,15 @@ namespace RepetierSharp.RepetierMqtt
                         {
                             await _repetierMqttClient.MqttClient.PublishAsync(topic.Topic, eventData);
                         }
+
+                        if (_repetierMqttClient.PrinterEventTopics.TryGetValue(printer, out var eventTopicMap))
+                        {
+                            if (eventTopicMap.TryGetValue(eventName, out var topic1))
+                            {
+
+                                await _repetierMqttClient.MqttClient.PublishAsync(topic1.Topic, eventData);
+                            } 
+                        }
                     };
 
                     _repetierMqttClient.RepetierConnection.OnRawResponse += async (callbackID, command, response) =>
@@ -173,14 +190,19 @@ namespace RepetierSharp.RepetierMqtt
                         {
                             var topicFilter = new MqttTopicFilterBuilder()
                                 .WithQualityOfServiceLevel(_repetierMqttClient.DefaultResponseTopic.QualityOfServiceLevel)
-                                .WithTopic($"{_repetierMqttClient.DefaultResponseTopic.Topic}/{command}")
+                                .WithTopic($"{_repetierMqttClient.DefaultResponseTopic.Topic}/{callbackID};{command}")
                                 .WithRetainAsPublished(_repetierMqttClient.DefaultResponseTopic.RetainAsPublished)
                                 .Build();
                             await _repetierMqttClient.MqttClient.PublishAsync(BuildMessage(topicFilter, response));
                         }
                         if (_repetierMqttClient.CommandResponseTopics.TryGetValue(command, out var topic))
                         {
-                            await _repetierMqttClient.MqttClient.PublishAsync(BuildMessage(topic, response));
+                            var topicFilter = new MqttTopicFilterBuilder()
+                               .WithQualityOfServiceLevel(topic.QualityOfServiceLevel)
+                               .WithTopic($"{topic.Topic}/{callbackID}")
+                               .WithRetainAsPublished(topic.RetainAsPublished)
+                               .Build();
+                            await _repetierMqttClient.MqttClient.PublishAsync(BuildMessage(topicFilter, response));
                         }
                     };
                 });

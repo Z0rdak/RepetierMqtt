@@ -22,6 +22,13 @@ namespace RepetierSharp.RepetierMqtt
         private Dictionary<string, MqttTopicFilter> EventTopics { get; set; } = new Dictionary<string, MqttTopicFilter>();
 
         /// <summary>
+        /// Mapping for events -> topics
+        /// Used to determine where to publish the data of an event
+        /// </summary>
+        private Dictionary<string, Dictionary<string, MqttTopicFilter>> PrinterEventTopics { get; set; } = new Dictionary<string, Dictionary<string, MqttTopicFilter>>();
+
+
+        /// <summary>
         /// Mapping for command -> topics
         /// Used to determine where to publish the response data of a sent command
         /// </summary>
