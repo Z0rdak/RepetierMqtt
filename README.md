@@ -38,7 +38,7 @@ MqttClient.Connect();
 ```
 
 This creates an simple instance with not much functionally other than offering you a MQTT client to publish messages. 
-The provided `BaseTopic` is put in front of every other provided topic to create a compound topic.  
+The provided `BaseTopic` is put in front of every other provided topic. The `MqttClientOption` type holds information about the broker, authentication, etc. See [MQTTnet](https://github.com/dotnet/MQTTnet/wiki/Client#client-options) for more information.
 
 ### Adding default topics for events and response messages
 
