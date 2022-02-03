@@ -11,6 +11,7 @@ using MQTTnet.Client.Subscribing;
 using MQTTnet.Protocol;
 using RepetierMqtt.Util;
 using RepetierSharp;
+using RepetierSharp.Models.Commands;
 using RepetierSharp.RepetierMqtt;
 using RepetierSharp.RepetierMqtt.Util;
 
@@ -93,6 +94,12 @@ namespace RepetierSharp.RepetierMqtt
                 return this;
             }
 
+            public RepetierMqttClientBuilder WithPredefinedCommand(string topic, ICommandData command)
+            {
+                _repetierMqttClient.CommandMapping.Add(topic, command);
+                return this;
+            }
+
             public RepetierMqttClient Build()
             {
                 if (_repetierMqttClient.RepetierConnection == null)
@@ -127,6 +134,11 @@ namespace RepetierSharp.RepetierMqtt
                     if (_repetierMqttClient.UploadGCodeTopic != null)
                     {
                         await _repetierMqttClient.MqttClient.SubscribeAsync(_repetierMqttClient.UploadGCodeTopic);
+                    }
+
+                    foreach (var entry in _repetierMqttClient.CommandMapping)
+                    {
+                        await _repetierMqttClient.MqttClient.SubscribeAsync(entry.Key);
                     }
 
                     _repetierMqttClient.RepetierConnection.OnRawEvent += async (eventName, printer, eventData) =>
@@ -189,13 +201,14 @@ namespace RepetierSharp.RepetierMqtt
 
                 _repetierMqttClient.MqttClient.UseApplicationMessageReceivedHandler(e =>
                 {
-                    Console.WriteLine("Received");
                     var topic = e.ApplicationMessage.Topic;
                     if (_repetierMqttClient.ExecuteCommandTopic != null && topic == _repetierMqttClient.ExecuteCommandTopic.Topic)
                     {
                         try
                         {
-                            // _repetierMqttClient.RepetierConnection.SendCommand(e.ApplicationMessage.Payload);
+                            // TODO: validate payload and handle error
+                            var rawCommand = JsonSerializer.Deserialize<RawCommand>(e.ApplicationMessage.Payload);
+                            _repetierMqttClient.RepetierConnection.SendCommand(rawCommand.Command, rawCommand.Printer, rawCommand.Data);
                         }
                         catch (Exception ex)
                         {
@@ -207,7 +220,7 @@ namespace RepetierSharp.RepetierMqtt
                     {
                         try
                         {
-                            // TODO: validate payload
+                            // TODO: validate payload and handle error
                             var gcodeCommand = JsonSerializer.Deserialize<UploadGCodeCommand>(e.ApplicationMessage.Payload);
                             if (gcodeCommand.Autostart)
                             {
@@ -224,6 +237,13 @@ namespace RepetierSharp.RepetierMqtt
                         }
                     }
 
+                    foreach (var entry in _repetierMqttClient.CommandMapping)
+                    {
+                        if (entry.Key == topic)
+                        {
+                            _repetierMqttClient.RepetierConnection.SendCommand(entry.Value);
+                        }
+                    }
                 });
 
                 return _repetierMqttClient;
