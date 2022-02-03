@@ -27,7 +27,6 @@ namespace RepetierSharp.RepetierMqtt
         /// </summary>
         private Dictionary<string, MqttTopicFilter> CommandResponseTopics { get; set; } = new Dictionary<string, MqttTopicFilter>();
 
-
         public RepetierConnection RepetierConnection { get; private set; }
 
         public string BaseTopic { get; set; }
@@ -38,7 +37,6 @@ namespace RepetierSharp.RepetierMqtt
 
         private uint ReconnectDelay { get; set; } = 3000;
 
-        // TODO: 
         /// <summary>
         /// Topic -> Command to execute 
         /// </summary>
