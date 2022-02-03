@@ -9,7 +9,6 @@ using MQTTnet.Client;
 using MQTTnet.Client.Options;
 using MQTTnet.Client.Subscribing;
 using MQTTnet.Protocol;
-using RepetierMqtt.Util;
 using RepetierSharp;
 using RepetierSharp.Models.Commands;
 using RepetierSharp.RepetierMqtt;

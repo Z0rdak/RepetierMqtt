@@ -2,7 +2,7 @@
 using System.Text;
 using System.Text.Json.Serialization;
 
-namespace RepetierMqtt.Util
+namespace RepetierSharp.RepetierMqtt.Util
 {
     public class UploadGCodeCommand
     {
