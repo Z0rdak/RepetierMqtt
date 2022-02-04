@@ -40,6 +40,41 @@ MqttClient.Connect();
 This creates an simple instance with not much functionally other than offering you a MQTT client to publish messages. 
 The provided `BaseTopic` is put in front of every other provided topic. The `MqttClientOption` type holds information about the broker, authentication, etc. See [MQTTnet](https://github.com/dotnet/MQTTnet/wiki/Client#client-options) for more information.
 
+### Payload of published messages
+
+In order to be able to identify the event and command responses, the published messages contain additional information. `data` contains the event payload or the command response payload.
+
+#### Command responses
+
+```json
+{
+    "callbackId": 42,
+    "command": "listModelGroups",
+    "data" : {
+      "groupNames": [
+        "#",
+        "My Robot"
+      ],
+        "ok": true
+    }
+}
+```
+
+#### Command responses
+
+```json
+{
+    "event": "jobFinished",
+    "printer": "Cartesian",
+    "data" : {
+      "duration": 519,
+      "end": 519,
+      "lines": 18961,
+      "start": 1615393295
+    }
+}
+```
+
 ### Adding default topics for events and response messages
 
 To forward events and responses from commands you can add default topics:
@@ -50,7 +85,7 @@ RepetierMqttClient MqttClient = new RepetierMqttClientBuilder()
     .WithMqttClientOptions(MqttOptionsProvider.DefaultMqttClientOptions)       
     .WithBaseTopic("RepetierMqtt/Neptune-19")
     .WithDefaultEventTopic("Event")               // {BaseTopic}/Event[/{printer}]/{event}
-    .WithDefaultResponseTopic("Response")         // {BaseTopic}/Response/{callbackID};{command}
+    .WithDefaultResponseTopic("Response")         // {BaseTopic}/Response/{command}
     .Build();
 
 MqttClient.Connect();
@@ -59,7 +94,7 @@ MqttClient.Connect();
 With this setup all events associated with a printer are published to their own topic `RepetierMqtt/Neptune-19/Event/{printer}/{eventName}`. 
 Other events are published to `RepetierMqtt/Neptune-19/Event/{eventName}`.
 
-Commands can be associated with a printer but are published to their own topic without the printer included `RepetierMqtt/Neptune-19/Response/{callbackID};{command}`.
+Commands can be associated with a printer but are published to their own topic without the printer included `RepetierMqtt/Neptune-19/Response/{command}`.
 
 ### Defining topics for specific events or command responses
 
@@ -68,14 +103,14 @@ RepetierMqttClient MqttClient = new RepetierMqttClientBuilder()
     .WithRepetierConnection(rc)
     .WithMqttClientOptions(MqttOptionsProvider.DefaultMqttClientOptions)       
     .WithBaseTopic("RepetierMqtt/Neptune-19")
-    .WithCommandResponseTopic("startJob", "StartJobTopic")               //{BaseTopic}/StartJobTopic/{callbackId}
+    .WithCommandResponseTopic("startJob", "StartJobTopic")               //{BaseTopic}/StartJobTopic
     .WithPrinterEventTopic("temp", "Cartesian", "CartesianTempValues")   //{BaseTopic}/CartesianTempValues
     .WithEventTopic("temp", "AllTempValues")                             //{BaseTopic}/AllTempValues
     .Build();
 
 MqttClient.Connect();
 ```
-Line 5 adds a topic where only information about command responses for the command `startJob` is published: `RepetierMqtt/Neptune-19/StartJobTopic/42`.
+Line 5 adds a topic where only information about command responses for the command `startJob` is published: `RepetierMqtt/Neptune-19/StartJobTopic`.
 The `callbackId` can be used to indentify the send command.
 
 Line 6 adds a topic for temps event associated with the printer Cartesian: `RepetierMqtt/Neptune-19/CartesianTempValues`.
