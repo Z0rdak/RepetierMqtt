@@ -148,6 +148,7 @@ namespace RepetierSharp.RepetierMqtt
                         await _repetierMqttClient.MqttClient.SubscribeAsync(entry.Key);
                     }
 
+                    // forward/publish event messages
                     _repetierMqttClient.RepetierConnection.OnRawEvent += async (eventName, printer, eventData) =>
                     {
                         if (_repetierMqttClient.DefaultEventTopic != null)
@@ -161,12 +162,19 @@ namespace RepetierSharp.RepetierMqtt
                             {
                                 eventTopic = $"{_repetierMqttClient.DefaultEventTopic.Topic}/{eventName}";
                             }
+                            var RepetierEventMsg = new RepetierEventMessage
+                            {
+                                EventName = eventName,
+                                Printer = printer,
+                                Data = JsonSerializer.Deserialize<Dictionary<string, object>>(eventData)
+                            };
                             var topicFilter = new MqttTopicFilterBuilder()
                                 .WithQualityOfServiceLevel(_repetierMqttClient.DefaultEventTopic.QualityOfServiceLevel)
                                 .WithTopic(eventTopic)
                                 .WithRetainAsPublished(_repetierMqttClient.DefaultEventTopic.RetainAsPublished)
                                 .Build();
-                            await _repetierMqttClient.MqttClient.PublishAsync(BuildMessage(topicFilter, eventData));
+                            var payload = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(RepetierEventMsg));
+                            await _repetierMqttClient.MqttClient.PublishAsync(BuildMessage(topicFilter, payload));
                         }
                         if (_repetierMqttClient.EventTopics.TryGetValue(eventName, out var topic))
                         {
@@ -183,22 +191,30 @@ namespace RepetierSharp.RepetierMqtt
                         }
                     };
 
+                    // forward/publish response messages
                     _repetierMqttClient.RepetierConnection.OnRawResponse += async (callbackID, command, response) =>
                     {
                         if (_repetierMqttClient.DefaultResponseTopic != null)
                         {
+                            var RepetierResponseMSg = new RepetierResponseMessage
+                            {
+                                CallbackId = callbackID,
+                                Command = command,
+                                Data = JsonSerializer.Deserialize<Dictionary<string, object>>(response)
+                            };
                             var topicFilter = new MqttTopicFilterBuilder()
                                 .WithQualityOfServiceLevel(_repetierMqttClient.DefaultResponseTopic.QualityOfServiceLevel)
-                                .WithTopic($"{_repetierMqttClient.DefaultResponseTopic.Topic}/{callbackID};{command}")
+                                .WithTopic($"{_repetierMqttClient.DefaultResponseTopic.Topic}/{command}")
                                 .WithRetainAsPublished(_repetierMqttClient.DefaultResponseTopic.RetainAsPublished)
                                 .Build();
-                            await _repetierMqttClient.MqttClient.PublishAsync(BuildMessage(topicFilter, response));
+                            var payload = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(RepetierResponseMSg));
+                            await _repetierMqttClient.MqttClient.PublishAsync(BuildMessage(topicFilter, payload));
                         }
                         if (_repetierMqttClient.CommandResponseTopics.TryGetValue(command, out var topic))
                         {
                             var topicFilter = new MqttTopicFilterBuilder()
                                .WithQualityOfServiceLevel(topic.QualityOfServiceLevel)
-                               .WithTopic($"{topic.Topic}/{callbackID}")
+                               .WithTopic(topic.Topic)
                                .WithRetainAsPublished(topic.RetainAsPublished)
                                .Build();
                             await _repetierMqttClient.MqttClient.PublishAsync(BuildMessage(topicFilter, response));
