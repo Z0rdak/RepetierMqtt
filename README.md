@@ -44,7 +44,7 @@ The provided `BaseTopic` is put in front of every other provided topic. The `Mqt
 
 In order to be able to identify the event and command responses, the published messages contain additional information. `data` contains the event payload or the command response payload.
 
-#### Command responses
+#### Command responses example
 
 ```json
 {
@@ -60,7 +60,7 @@ In order to be able to identify the event and command responses, the published m
 }
 ```
 
-#### Command responses
+#### Event payload example
 
 ```json
 {
