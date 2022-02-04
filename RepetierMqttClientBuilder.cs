@@ -162,12 +162,21 @@ namespace RepetierSharp.RepetierMqtt
                             {
                                 eventTopic = $"{_repetierMqttClient.DefaultEventTopic.Topic}/{eventName}";
                             }
+
                             var RepetierEventMsg = new RepetierEventMessage
                             {
                                 EventName = eventName,
-                                Printer = printer,
-                                Data = JsonSerializer.Deserialize<Dictionary<string, object>>(eventData)
+                                Printer = printer
                             };
+                            try 
+                            {
+                                RepetierEventMsg.Data = JsonSerializer.Deserialize<Dictionary<string, object>>(eventData);
+                            }
+                            catch (Exception ex)
+                            {
+                                RepetierEventMsg.Data = new Dictionary<string, object>();
+                            }
+
                             var topicFilter = new MqttTopicFilterBuilder()
                                 .WithQualityOfServiceLevel(_repetierMqttClient.DefaultEventTopic.QualityOfServiceLevel)
                                 .WithTopic(eventTopic)
@@ -181,13 +190,16 @@ namespace RepetierSharp.RepetierMqtt
                             await _repetierMqttClient.MqttClient.PublishAsync(topic.Topic, eventData);
                         }
 
-                        if (_repetierMqttClient.PrinterEventTopics.TryGetValue(printer, out var eventTopicMap))
+                        if (!string.IsNullOrEmpty(printer))
                         {
-                            if (eventTopicMap.TryGetValue(eventName, out var topic1))
+                            if (_repetierMqttClient.PrinterEventTopics.TryGetValue(printer, out var eventTopicMap))
                             {
+                                if (eventTopicMap.TryGetValue(eventName, out var topic1))
+                                {
 
-                                await _repetierMqttClient.MqttClient.PublishAsync(topic1.Topic, eventData);
-                            } 
+                                    await _repetierMqttClient.MqttClient.PublishAsync(topic1.Topic, eventData);
+                                }
+                            }
                         }
                     };
 
@@ -199,15 +211,23 @@ namespace RepetierSharp.RepetierMqtt
                             var RepetierResponseMSg = new RepetierResponseMessage
                             {
                                 CallbackId = callbackID,
-                                Command = command,
-                                Data = JsonSerializer.Deserialize<Dictionary<string, object>>(response)
+                                Command = command
                             };
+                            try
+                            {
+                                RepetierResponseMSg.Data = JsonSerializer.Deserialize<Dictionary<string, object>>(response);
+                            }
+                            catch (Exception ex)
+                            {
+                                RepetierResponseMSg.Data = new Dictionary<string, object>();
+                            }
                             var topicFilter = new MqttTopicFilterBuilder()
                                 .WithQualityOfServiceLevel(_repetierMqttClient.DefaultResponseTopic.QualityOfServiceLevel)
                                 .WithTopic($"{_repetierMqttClient.DefaultResponseTopic.Topic}/{command}")
                                 .WithRetainAsPublished(_repetierMqttClient.DefaultResponseTopic.RetainAsPublished)
                                 .Build();
-                            var payload = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(RepetierResponseMSg));
+                            var payload = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(RepetierResponseMSg));                          
+                         
                             await _repetierMqttClient.MqttClient.PublishAsync(BuildMessage(topicFilter, payload));
                         }
                         if (_repetierMqttClient.CommandResponseTopics.TryGetValue(command, out var topic))
