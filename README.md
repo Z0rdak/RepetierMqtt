@@ -2,7 +2,7 @@
 
 ## Introduction
 
-RepetierMqtt is a small and simple MQTT client which leverages the RepetierSharp client to forward information from the Repetier Server API to MQTT. 
+RepetierMqtt is a small and simple MQTT client which leverages the [RepetierSharp](https://github.com/Z0rdak/RepetierSharp) client to forward information from the Repetier Server API to MQTT. 
 It also provides the possibility to send commands via MQTT to the Repetier Server as well as upload and start gcode files.
 
 ### Framework support
