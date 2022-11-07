@@ -1,5 +1,8 @@
 # RepetierMqtt - A simple, easy configurable MQTT client to access your [Repetier Server](https://www.repetier-server.com/ "Repetier Server")
 
+![NuGet downloads](https://img.shields.io/nuget/dt/RepetierMqtt?label=Nuget%3A%RepetierMqtt)
+![Nuget version](https://img.shields.io/nuget/v/RepetierMqtt)
+
 ## Introduction
 
 RepetierMqtt is a small and simple MQTT client which leverages the [RepetierSharp](https://github.com/Z0rdak/RepetierSharp) client to forward information from the Repetier Server API to MQTT. 
