@@ -14,7 +14,7 @@ Currently RepetierMqtt supports .NET Core 3.1 with plans to also support .NET 5 
 
 ## Getting started
 
-**DISCLAIMER:** *RepetierMqtt is still in beta. Bugs are to be expected - please bear with me and help improving it by submitting issues on [GitHub](https://github.com/Z0rdak/RepetierMqtt/issues).*
+**DISCLAIMER:** *RepetierMqtt is still in beta. Bugs are to be expected - please help improving RepetierMqtt by submitting issues on [GitHub](https://github.com/Z0rdak/RepetierMqtt/issues).*
 
 The following sections show some examples on how to use the RepetierMqtt client. The examples are not exhaustive. I will try to write a more thourough documentation as soon as possible.
 
