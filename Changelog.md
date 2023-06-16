@@ -1,4 +1,6 @@
 ﻿# [0.1.3] - 2023-06-16
+## Added
+* RepetierMqtt now supports net5.0 and net6.0.
 ## Changed 
 * Updated RepetierSharp version to 0.1.8.1
 * Updated MQTTnet version to 4.2.1.781 (latest)
