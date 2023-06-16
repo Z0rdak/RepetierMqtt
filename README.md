@@ -10,7 +10,7 @@ It also provides the possibility to send commands via MQTT to the Repetier Serve
 
 ### Framework support
 
-Currently RepetierMqtt supports .NET Core 3.1 with plans to also support .NET 5 and above.
+Currently RepetierMqtt supports .NET Core 3.1, .NET 5 and .NET 6.
 
 ## Getting started
 
