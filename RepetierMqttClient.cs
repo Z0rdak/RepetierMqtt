@@ -1,14 +1,7 @@
-﻿using MQTTnet;
-using MQTTnet.Client;
-using MQTTnet.Client.Connecting;
-using MQTTnet.Client.Options;
-using MQTTnet.Protocol;
+﻿using MQTTnet.Client;
+using MQTTnet.Packets;
 using RepetierSharp.Models.Commands;
-using RepetierSharp.RepetierMqtt.Util;
-using System;
 using System.Collections.Generic;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace RepetierSharp.RepetierMqtt
@@ -40,7 +33,7 @@ namespace RepetierSharp.RepetierMqtt
 
         private IMqttClient MqttClient { get; set; }
 
-        private IMqttClientOptions MqttClientOptions { get; set; }
+        private MqttClientOptions MqttClientOptions { get; set; }
 
         private uint ReconnectDelay { get; set; } = 3000;
 
@@ -64,7 +57,7 @@ namespace RepetierSharp.RepetierMqtt
         public MqttTopicFilter DefaultResponseTopic { get; private set; }
 
         public MqttTopicFilter DefaultEventTopic { get; private set; }
-  
+
         private RepetierMqttClient() { }
 
         public Task<MqttClientConnectResult> Connect()

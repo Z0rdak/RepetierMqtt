@@ -1,17 +1,17 @@
-﻿using MQTTnet.Client.Options;
+﻿using MQTTnet.Client;
 using System;
 
 namespace RepetierSharp.RepetierMqtt.Util
 {
     public class MqttOptionsProvider
     {
-        public static IMqttClientOptions DefaultMqttClientOptions
+        public static MqttClientOptions DefaultMqttClientOptions
         {
             get { return _mqttClientOptions ?? DefaultClientOptions(); }
             set { _mqttClientOptions = value ?? DefaultClientOptions(); }
         }
 
-        private static IMqttClientOptions _mqttClientOptions;
+        private static MqttClientOptions _mqttClientOptions;
 
         public static string DefaultBrokerUrl
         {
@@ -21,7 +21,7 @@ namespace RepetierSharp.RepetierMqtt.Util
 
         private static string _brokerUrl;
 
-        private static IMqttClientOptions DefaultClientOptions(string clientId = null)
+        private static MqttClientOptions DefaultClientOptions(string clientId = null)
         {
             return new MqttClientOptionsBuilder()
                 .WithClientId(clientId ?? $"{Guid.NewGuid()}")

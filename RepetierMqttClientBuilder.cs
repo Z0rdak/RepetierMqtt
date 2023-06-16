@@ -1,18 +1,14 @@
-﻿using System;
+﻿using MQTTnet;
+using MQTTnet.Client;
+using MQTTnet.Packets;
+using MQTTnet.Protocol;
+using RepetierSharp.Models.Commands;
+using RepetierSharp.RepetierMqtt.Util;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Text.Json;
-using System.Threading;
 using System.Threading.Tasks;
-using MQTTnet;
-using MQTTnet.Client;
-using MQTTnet.Client.Options;
-using MQTTnet.Client.Subscribing;
-using MQTTnet.Protocol;
-using RepetierSharp;
-using RepetierSharp.Models.Commands;
-using RepetierSharp.RepetierMqtt;
-using RepetierSharp.RepetierMqtt.Util;
 
 namespace RepetierSharp.RepetierMqtt
 {
@@ -35,7 +31,7 @@ namespace RepetierSharp.RepetierMqtt
                 return this;
             }
 
-            public RepetierMqttClientBuilder WithMqttClientOptions(IMqttClientOptions options)
+            public RepetierMqttClientBuilder WithMqttClientOptions(MqttClientOptions options)
             {
                 _repetierMqttClient.MqttClientOptions = options;
                 return this;
@@ -121,7 +117,7 @@ namespace RepetierSharp.RepetierMqtt
 
                 _repetierMqttClient.MqttClient = new MqttFactory().CreateMqttClient();
 
-                _repetierMqttClient.MqttClient.UseConnectedHandler(async connectedArgs =>
+                _repetierMqttClient.MqttClient.ConnectedAsync += (async connectedArgs =>
                 {
                     if (_repetierMqttClient.DefaultEventTopic != null)
                     {
@@ -168,7 +164,7 @@ namespace RepetierSharp.RepetierMqtt
                                 EventName = eventName,
                                 Printer = printer
                             };
-                            try 
+                            try
                             {
                                 RepetierEventMsg.Data = JsonSerializer.Deserialize<Dictionary<string, object>>(eventData);
                             }
@@ -187,7 +183,11 @@ namespace RepetierSharp.RepetierMqtt
                         }
                         if (_repetierMqttClient.EventTopics.TryGetValue(eventName, out var topic))
                         {
-                            await _repetierMqttClient.MqttClient.PublishAsync(topic.Topic, eventData);
+                            var mqttMsg = new MqttApplicationMessageBuilder()
+                            .WithTopic(topic.Topic)
+                            .WithPayload(eventData)
+                            .Build();
+                            await _repetierMqttClient.MqttClient.PublishAsync(mqttMsg);
                         }
 
                         if (!string.IsNullOrEmpty(printer))
@@ -196,8 +196,11 @@ namespace RepetierSharp.RepetierMqtt
                             {
                                 if (eventTopicMap.TryGetValue(eventName, out var topic1))
                                 {
-
-                                    await _repetierMqttClient.MqttClient.PublishAsync(topic1.Topic, eventData);
+                                    var mqttMsg = new MqttApplicationMessageBuilder()
+                                    .WithTopic(topic1.Topic)
+                                    .WithPayload(eventData)
+                                    .Build();
+                                    await _repetierMqttClient.MqttClient.PublishAsync(mqttMsg);
                                 }
                             }
                         }
@@ -226,8 +229,8 @@ namespace RepetierSharp.RepetierMqtt
                                 .WithTopic($"{_repetierMqttClient.DefaultResponseTopic.Topic}/{command}")
                                 .WithRetainAsPublished(_repetierMqttClient.DefaultResponseTopic.RetainAsPublished)
                                 .Build();
-                            var payload = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(RepetierResponseMSg));                          
-                         
+                            var payload = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(RepetierResponseMSg));
+
                             await _repetierMqttClient.MqttClient.PublishAsync(BuildMessage(topicFilter, payload));
                         }
                         if (_repetierMqttClient.CommandResponseTopics.TryGetValue(command, out var topic))
@@ -242,7 +245,7 @@ namespace RepetierSharp.RepetierMqtt
                     };
                 });
 
-                _repetierMqttClient.MqttClient.UseDisconnectedHandler(async disconnectedArgs =>
+                _repetierMqttClient.MqttClient.DisconnectedAsync += (async disconnectedArgs =>
                 {
                     await Task.Delay(TimeSpan.FromMilliseconds(_repetierMqttClient.ReconnectDelay));
                     try
@@ -256,7 +259,7 @@ namespace RepetierSharp.RepetierMqtt
                 });
 
 
-                _repetierMqttClient.MqttClient.UseApplicationMessageReceivedHandler(e =>
+                _repetierMqttClient.MqttClient.ApplicationMessageReceivedAsync += async e =>
                 {
                     var topic = e.ApplicationMessage.Topic;
                     if (_repetierMqttClient.ExecuteCommandTopic != null && topic == _repetierMqttClient.ExecuteCommandTopic.Topic)
@@ -298,10 +301,10 @@ namespace RepetierSharp.RepetierMqtt
                     {
                         if (entry.Key == topic)
                         {
-                            _repetierMqttClient.RepetierConnection.SendCommand(entry.Value);
+                            await _repetierMqttClient.RepetierConnection.SendCommand(entry.Value);
                         }
                     }
-                });
+                };
 
                 return _repetierMqttClient;
             }
